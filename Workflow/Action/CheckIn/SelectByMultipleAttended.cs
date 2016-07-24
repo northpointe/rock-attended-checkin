@@ -142,8 +142,9 @@ namespace cc.newspring.AttendedCheckIn.Workflow.Action.CheckIn
                                     // room balance only on new check-ins
                                     if ( group != null && roomBalanceGroupTypeIds.Contains( group.Group.GroupTypeId ) && !useCheckinOverride )
                                     {
-                                        //TODO: use KioskLocationAttendance and group.AvailableForSchedule to room balance by service time attendance, not the entire day
-                                        var currentAttendance = group.Locations.Select( l => KioskLocationAttendance.Read( l.Location.Id ).CurrentCount ).Sum();
+                                        
+                                        //TODO: verify this works as expected
+                                        var currentAttendance = group.Locations.Select( l => KioskLocationAttendance.Read( l.Location.Id, l.AvailableForSchedule.FirstOrDefault() ).CurrentCount ).Sum();
                                         var lowestAttendedGroup = groupType.Groups.Where( g => !g.ExcludedByFilter && !excludedLocations.Contains( g.Group.Name ) )
                                             .Select( g => new { Group = g, Attendance = g.Locations.Select( l => KioskLocationAttendance.Read( l.Location.Id ).CurrentCount ).Sum() } )
                                             .OrderBy( g => g.Attendance )

@@ -509,10 +509,14 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
                     lbSchedule.AddCssClass( "active" );
                 }
 
-                if ( CurrentCheckInType != null && CurrentCheckInType.DisplayLocationCount )
-                {
-                    var scheduleAttendance = ScheduleAttendanceList.Where( s => s.ScheduleId == schedule.Schedule.Id );
-                    lbSchedule.Text = string.Format( "{0} ({1})", schedule.Schedule.Name, scheduleAttendance.Select( s => s.AttendanceCount ).FirstOrDefault() );
+                var selectedLocationId = ViewState["locationId"].ToStringSafe().AsType<int?>();
+                if ( CurrentCheckInType != null && CurrentCheckInType.DisplayLocationCount && selectedLocationId != null )
+                {   
+                    var scheduleAttendance = KioskLocationAttendance.Read( (int)selectedLocationId, schedule.Schedule.Id );
+                    lbSchedule.Text = string.Format( "{0} ({1})", schedule.Schedule.Name, scheduleAttendance.CurrentCount );
+
+                    //var scheduleAttendance = ScheduleAttendanceList.Where( s => s.ScheduleId == schedule.Schedule.Id );                    
+                    //lbSchedule.Text = string.Format( "{0} ({1})", schedule.Schedule.Name, scheduleAttendance.Select( s => s.AttendanceCount ).FirstOrDefault() );
                 }
                 else
                 {
