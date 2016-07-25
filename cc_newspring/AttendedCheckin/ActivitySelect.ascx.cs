@@ -94,20 +94,7 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
             }
         }
 
-        /// <summary>
-        /// A container for a schedule and attendance count
-        /// </summary>
-        private class ScheduleAttendance
-        {
-            public int ScheduleId { get; set; }
-
-            public int AttendanceCount { get; set; }
-        }
-
-        /// <summary>
-        /// A list of attendance counts per schedule
-        /// </summary>
-        private List<ScheduleAttendance> ScheduleAttendanceList = new List<ScheduleAttendance>();
+        
 
         #endregion Variables
 
@@ -511,11 +498,11 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
 
                 var selectedLocationId = ViewState["locationId"].ToStringSafe().AsType<int?>();
                 if ( CurrentCheckInType != null && CurrentCheckInType.DisplayLocationCount && selectedLocationId != null )
-                {   
-                    var scheduleAttendance = KioskLocationAttendance.Read( (int)selectedLocationId, schedule.Schedule.Id );
+                {
+                    var scheduleAttendance = KioskLocationAttendance.Read( (int)selectedLocationId );
                     lbSchedule.Text = string.Format( "{0} ({1})", schedule.Schedule.Name, scheduleAttendance.CurrentCount );
 
-                    //var scheduleAttendance = ScheduleAttendanceList.Where( s => s.ScheduleId == schedule.Schedule.Id );                    
+                    //var scheduleAttendance = ScheduleAttendanceList.Where( s => s.ScheduleId == schedule.Schedule.Id );
                     //lbSchedule.Text = string.Format( "{0} ({1})", schedule.Schedule.Name, scheduleAttendance.Select( s => s.AttendanceCount ).FirstOrDefault() );
                 }
                 else
@@ -906,7 +893,7 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
 
                     if ( location != null )
                     {
-                        GetScheduleAttendance( location );
+                        //GetScheduleAttendance( location );
                         rSchedule.DataSource = location.Schedules;
                         rSchedule.DataBind();
                         pnlSchedules.Update();
@@ -1033,29 +1020,6 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
             }
 
             return family.People.FirstOrDefault( p => p.Person.Id == personId );
-        }
-
-        /// <summary>
-        /// Gets the attendance count for all of the schedules for a location. This will show on the schedule buttons.
-        /// </summary>
-        /// <param name="location"></param>
-        protected void GetScheduleAttendance( CheckInLocation location )
-        {
-            if ( location != null )
-            {
-                var rockContext = new RockContext();
-                var attendanceService = new AttendanceService( rockContext );
-                var attendanceQuery = attendanceService.GetByDateAndLocation( DateTime.Now, location.Location.Id );
-
-                ScheduleAttendanceList.Clear();
-                foreach ( var schedule in location.Schedules )
-                {
-                    var attendance = new ScheduleAttendance();
-                    attendance.ScheduleId = schedule.Schedule.Id;
-                    attendance.AttendanceCount = attendanceQuery.Where( l => l.ScheduleId == attendance.ScheduleId ).Count();
-                    ScheduleAttendanceList.Add( attendance );
-                }
-            }
         }
 
         #endregion Internal Methods
