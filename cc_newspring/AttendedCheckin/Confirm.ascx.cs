@@ -61,6 +61,14 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
         private bool RemoveFromQueue = false;
 
         /// <summary>
+        /// Gets or sets the flag when printing individual labels
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if [printing individual labels]; otherwise, <c>false</c>.
+        /// </value>
+        private bool btnPrintIndividualLabel = false;
+
+        /// <summary>
         /// Gets or sets a value indicating whether [run save attendance].
         /// </summary>
         /// <value>
@@ -119,6 +127,7 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
                 {
                     gPersonList.UseAccessibleHeader = true;
                     BindGrid();
+                    hfPrintCount.Value = "0";
                 }
             }
         }
@@ -130,6 +139,13 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
         {
             var selectedPeopleList = CurrentCheckInState.CheckIn.Families.Where( f => f.Selected ).FirstOrDefault()
                 .People.Where( p => p.Selected ).OrderBy( p => p.Person.FullNameReversed ).ToList();
+
+            var showGroups = GetAttributeValue( "DisplayGroupNames" ).AsBoolean();            
+            if ( showGroups )
+            {
+                // change the header text to be consistent
+                gPersonList.Columns[1].HeaderText = "Group";
+            }
 
             var checkInList = new List<Activity>();
             foreach ( var person in selectedPeopleList )
@@ -146,8 +162,7 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
                                 var checkIn = new Activity();
 
                                 checkIn.Name = person.Person.FullName;
-                                var showGroup = GetAttributeValue( "DisplayGroupNames" ).AsBoolean();
-                                checkIn.Location = showGroup ? group.Group.Name : location.Location.Name;
+                                checkIn.Location = showGroups ? group.Group.Name : location.Location.Name;
                                 checkIn.Schedule = schedule.Schedule.Name;
                                 checkIn.PersonId = person.Person.Id;
                                 checkIn.GroupId = group.Group.Id;
@@ -361,6 +376,7 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
         {
             if ( e.CommandName == "Print" )
             {
+                btnPrintIndividualLabel = true;
                 int labelIndex = Convert.ToInt32( e.CommandArgument );
                 var singleLabelDataKey = new ArrayList() { gPersonList.DataKeys[labelIndex] };
                 ProcessLabels( new DataKeyArray( singleLabelDataKey ) );
@@ -487,10 +503,27 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
                     }
                     else
                     {
-                        labels.AddRange( selectedGroupTypes.Where( gt => gt.Labels != null )
-                            .SelectMany( gt => gt.Labels )
-                            .Where( l => ( !RemoveFromQueue || l.FileGuid != designatedLabelGuid ) )
-                        );
+                        //check if individual print button pressed
+                        if ( checkinArray.Count == 1 && btnPrintIndividualLabel == true )
+                        {
+                            var selectedPerson = selectedPeople.FirstOrDefault( p => p.Person.Id == personId );
+                            if ( selectedPerson != null )
+                            {
+                                labels.AddRange( selectedPerson.GroupTypes.Where( gt => gt.Labels != null )
+                                    .SelectMany( gt => gt.Labels )
+                                    .Where( l => ( !RemoveFromQueue || l.FileGuid != designatedLabelGuid ) )
+                                );
+                            }
+
+                            btnPrintIndividualLabel = false;
+                        }
+                        else
+                        {
+                            labels.AddRange( selectedGroupTypes.Where( gt => gt.Labels != null )
+                                .SelectMany( gt => gt.Labels )
+                                .Where( l => ( !RemoveFromQueue || l.FileGuid != designatedLabelGuid ) )
+                            );
+                        }
 
                         // don't continue processing if printing all info on one label
                         break;
@@ -502,7 +535,28 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
                 {
                     var clientLabels = labels.Where( l => l.PrintFrom == PrintFrom.Client ).ToList();
                     var urlRoot = string.Format( "{0}://{1}", Request.Url.Scheme, Request.Url.Authority );
-                    clientLabels.ForEach( l => l.LabelFile = urlRoot + l.LabelFile );
+                    //clientLabels.ForEach( l => l.LabelFile = urlRoot + l.LabelFile );
+                    clientLabels.ForEach( l => l.LabelFile = urlRoot + l.LabelFile.Replace( "GetFile.ashx", "GetCheckinLabel.ashx" ) );
+
+                    var item = clientLabels.SingleOrDefault( l => l.FileGuid == designatedLabelGuid );
+                    if ( item != null )
+                    {
+                        if ( hfPrintCount.ValueAsInt() > 0 || hfPrintCount.Value != "0" )
+                        {
+                            if ( designatedLabelGuid != null || designatedLabelGuid.HasValue )
+                            {
+                                clientLabels.Remove( item );
+                                //new CheckInLabel() { FileGuid = designatedLabelGuid.Value }
+                            }
+                        }
+                        hfPrintCount.Value = "1";
+                    }
+
+                    for ( int i = 0; i < clientLabels.Count() - 1; i++ )
+                    {
+                        clientLabels.ElementAt( i ).LabelFile += "&delaycut=T";
+                    }
+
                     AddLabelScript( clientLabels.ToJson() );
                     pnlContent.Update();
                 }
@@ -626,7 +680,7 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
             string script = string.Format( @"
 
         // setup deviceready event to wait for cordova
-	    if (navigator.userAgent.match(/(iPhone|iPod|iPad)/)) {{
+if (navigator.userAgent.match(/(iPhone|iPod|iPad)/)) {{
             document.addEventListener('deviceready', onDeviceReady, false);
         }} else {{
             Sys.WebForms.PageRequestManager.getInstance().add_endRequest(onDeviceReady);
@@ -634,10 +688,14 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
 
 	    // label data
         var labelData = {0};
+        btnPrintClicked = true;
 
 		function onDeviceReady() {{
             try {{
-                printLabels();
+                if (btnPrintClicked) {{
+                    printLabels();
+                }}
+                btnPrintClicked = false;
             }}
             catch (err) {{
                 console.log('An error occurred printing labels: ' + err);
@@ -687,6 +745,14 @@ namespace RockWeb.Plugins.cc_newspring.AttendedCheckin
             else
             {
                 return input.Replace( "é", @"\82" );  // fix acute e
+            }
+            if ( isJson )
+            {
+                return input.Replace( "ñ", @"\\82" );  // fix ñ
+            }
+            else
+            {
+                return input.Replace( "ñ", @"\82" );  // fix ñ
             }
         }
 

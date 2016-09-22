@@ -2,7 +2,7 @@
 
 <asp:UpdatePanel ID="pnlContent" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
-
+        <asp:HiddenField ID="hfPrintCount" runat="server" />
         <asp:Panel ID="pnlConfirm" runat="server" CssClass="attended">
 
             <Rock:ModalAlert ID="maAlert" runat="server" />
@@ -53,7 +53,7 @@
                                     <asp:PlaceHolder ID="phPrinterStatus" runat="server"></asp:PlaceHolder>
                                 </div>
                                 <div class="col-xs-3 hard-right push-quarter-top">
-                                    <Rock:BootstrapButton ID="lbPrintAll" CssClass="btn btn-primary btn-lg btn-block btn-checkin-select" runat="server" OnClick="lbPrintAll_Click" Text="Print All"/>
+                                    <Rock:BootstrapButton ID="lbPrintAll" CssClass="btn btn-primary btn-lg btn-block btn-checkin-select" runat="server" OnClick="lbPrintAll_Click" Text="Print All" />
                                 </div>
                             </div>
                         </ContentTemplate>
