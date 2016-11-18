@@ -21,7 +21,7 @@
                 </div>
 
                 <div class="col-xs-2 checkin-actions text-right">
-                    <Rock:BootstrapButton ID="lbNext" CssClass="btn btn-lg btn-primary" runat="server" OnClick="lbNext_Click" EnableViewState="false">
+                    <Rock:BootstrapButton ID="lbNext" CssClass="btn btn-lg btn-primary famselected" runat="server" OnClick="lbNext_Click" EnableViewState="false">
                         <span class="fa fa-arrow-right" />
                     </Rock:BootstrapButton>
                 </div>
@@ -310,30 +310,43 @@
         $('.person').unbind('click').on('click', function (event) {
             event.stopPropagation();
             $(this).toggleClass('active');
-            var selectedIds = $('#hfSelectedPerson').val();
-            var buttonId = this.getAttribute('data-id');
-            if (selectedIds.indexOf(buttonId) >= 0) {
-                var buttonIdRegex = new RegExp(buttonId + ',*', "g");
-                $('#hfSelectedPerson').val(selectedIds.replace(buttonIdRegex, ''));
-            } else {
-                $('#hfSelectedPerson').val(buttonId + ',' + selectedIds);
-            }
             return false;
         });
 
         $('.visitor').unbind('click').on('click', function (event) {
             event.stopPropagation();
             $(this).toggleClass('active');
-            var selectedIds = $('#hfSelectedVisitor').val();
-            var buttonId = this.getAttribute('data-id');
-            if (selectedIds.indexOf(buttonId) >= 0) {
-                var buttonIdRegex = new RegExp(buttonId + ',*', "g");
-                $('#hfSelectedPerson').val(selectedIds.replace(buttonIdRegex, ''));
-            } else {
-                $('#hfSelectedVisitor').val(buttonId + ',' + selectedIds);
-            }
             return false;
         });
+
+
+        $('.famselected').unbind('click').on('click', function (event) {
+          event.preventDefault();
+          var link = this.getAttribute('href').substr(11);
+          $('#hfSelectedPerson').val("");
+          $(".person.active").each(function() {
+              var selectedIds = $('#hfSelectedPerson').val();
+              var buttonId = this.getAttribute('data-id');
+              if (selectedIds.indexOf(buttonId) >= 0) {
+                  $('#hfSelectedPerson').val(selectedIds);
+              } else {
+                  $('#hfSelectedPerson').val(buttonId + ',' + selectedIds);
+              }
+          });
+
+          $('#hfSelectedVisitor').val("");
+          $(".visitor.active").each(function() {
+              var selectedIds = $('#hfSelectedVisitor').val();
+              var buttonId = this.getAttribute('data-id');
+              if (selectedIds.indexOf(buttonId) >= 0) {
+                  $('#hfSelectedVisitor').val(selectedIds);
+              } else {
+                  $('#hfSelectedVisitor').val(buttonId + ',' + selectedIds);
+              }
+          });
+          eval(link);
+        });
+
 
         // begin standard modal input functions
         var setFocus = function () {
